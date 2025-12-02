@@ -1,24 +1,12 @@
 package com.jdz.vmd.common.tileentities;
 
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
-import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
-import com.gtnewhorizon.structurelib.structure.StructureDefinition;
-import gregtech.api.GregTechAPI;
-import gregtech.api.casing.Casings;
 import gregtech.api.enums.ItemList;
 import gregtech.api.enums.Materials;
+import gregtech.api.enums.VoltageIndex;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.util.GTUtility;
-import gtPlusPlus.core.block.ModBlocks;
-import net.minecraft.item.ItemStack;
-
-import static com.gtnewhorizon.structurelib.structure.StructureUtility.ofBlock;
-import static com.gtnewhorizon.structurelib.structure.StructureUtility.transpose;
-import static gregtech.api.enums.HatchElement.*;
-import static gregtech.api.enums.HatchElement.Energy;
-import static gregtech.api.util.GTStructureUtility.buildHatchAdder;
-import static gregtech.api.util.GTStructureUtility.ofFrame;
 
 public class MTEVoidMiners {
 
@@ -30,69 +18,31 @@ public class MTEVoidMiners {
 
         public VMLV(String aName, int tier) {
             super(aName, tier);
-            casingTextureIndex = GTUtility.getCasingTextureIndex(ItemList.Casing_SolidSteel.getBlock(), 0);
+        }
+
+        @Override
+        public ItemList getItemList() {
+            return ItemList.Casing_SolidSteel;
+        }
+
+        @Override
+        public Materials getMaterials() {
+            return Materials.Steel;
         }
 
         @Override
         protected int getMinTier() {
-            return 1; // LV
-        }
-
-        @Override
-        public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, net.minecraft.item.ItemStack aStack) {
-            return checkPiece("main", 1, 6, 0)
-                && checkHatches()
-                && GTUtility.getTier(getMaxInputVoltage()) >= getMinTier()
-                && mMaintenanceHatches.size() == 1;
-        }
-
-        @Override
-        public void construct(net.minecraft.item.ItemStack stackSize, boolean hintsOnly) {
-            buildPiece("main", stackSize, hintsOnly, 1, 6, 0);
-        }
-
-        @Override
-        public IStructureDefinition<VMLV> getStructureDefinition() {
-            return StructureDefinition.<VMLV>builder()
-                .addShape(
-                    "main",
-                    transpose(
-                        new String[][]{
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {"H~H", "HHH", "HHH"}}))
-                .addElement(
-                    'F',
-                    ofBlock(
-                        ItemList.Casing_LV.getBlock(),
-                        ItemList.Casing_LV.get(0)
-                            .getItemDamage()))
-                .addElement('G', ofFrame(Materials.Steel))
-                .addElement(
-                    'H',
-                    buildHatchAdder(VMLV.class).atLeast(InputHatch, OutputBus, InputBus, Maintenance, Energy)
-                        .dot(1)
-                        .casingIndex(8)
-                        .buildAndChain(
-                            ItemList.Casing_LV.getBlock(),
-                            ItemList.Casing_LV.get(0)
-                                .getItemDamage()))
-                .build();
-        }
-
-        @Override
-        public int survivalConstruct(net.minecraft.item.ItemStack stackSize, int elementBudget, ISurvivalBuildEnvironment env) {
-            if (mMachine) return -1;
-            return survivalBuildPiece("main", stackSize, 1, 6, 0, elementBudget, env, false, true);
+            return VoltageIndex.LV; // LV
         }
 
         @Override
         protected int getControllerTextureIndex() {
-            return 16;
+            return GTUtility.getCasingTextureIndex(getItemList().getBlock(), 0);
+        }
+
+        @Override
+        public IStructureDefinition<VMLV> getStructureDefinition() {
+            return buildBaseStructureDefinition(VMLV.class);
         }
 
         @Override
@@ -106,74 +56,35 @@ public class MTEVoidMiners {
 
         public VMHV(int aID, String aName, String aNameRegional) {
             super(aID, aName, aNameRegional, 8);
-            casingTextureIndex = GTUtility.getCasingTextureIndex(GregTechAPI.sBlockCasings4, 1);
         }
 
         public VMHV(String aName, int tier) {
             super(aName, tier);
-            casingTextureIndex = GTUtility.getCasingTextureIndex(GregTechAPI.sBlockCasings4, 1);
+        }
+
+        @Override
+        public ItemList getItemList() {
+            return ItemList.Casing_CleanStainlessSteel;
+        }
+
+        @Override
+        public Materials getMaterials() {
+            return Materials.StainlessSteel;
         }
 
         @Override
         protected int getMinTier() {
-            return 3;
-        }
-
-        @Override
-        public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
-            return checkPiece("main", 1, 6, 0)
-                && checkHatches()
-                && GTUtility.getTier(getMaxInputVoltage()) >= getMinTier()
-                && mMaintenanceHatches.size() == 1;
-        }
-
-        @Override
-        public void construct(ItemStack stackSize, boolean hintsOnly) {
-            buildPiece("main", stackSize, hintsOnly, 1, 6, 0);
+            return VoltageIndex.HV;
         }
 
         @Override
         public IStructureDefinition<VMHV> getStructureDefinition() {
-            return StructureDefinition.<VMHV>builder()
-                .addShape(
-                    "main",
-                    transpose(
-                        new String[][]{
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {"H~H", "HHH", "HHH"}}))
-                .addElement(
-                    'F',
-                    ofBlock(
-                        ItemList.Casing_HV.getBlock(),
-                        ItemList.Casing_HV.get(0)
-                            .getItemDamage()))
-                .addElement('G', ofFrame(Materials.StainlessSteel))
-                .addElement(
-                    'H',
-                    buildHatchAdder(VMHV.class).atLeast(InputHatch, OutputBus, InputBus, Maintenance, Energy)
-                        .dot(1)
-                        .casingIndex(8)
-                        .buildAndChain(
-                            ItemList.Casing_HV.getBlock(),
-                            ItemList.Casing_HV.get(0)
-                                .getItemDamage()))
-                .build();
-        }
-
-        @Override
-        public int survivalConstruct(ItemStack stackSize, int elementBudget, ISurvivalBuildEnvironment env) {
-            if (mMachine) return -1;
-            return survivalBuildPiece("main", stackSize, 1, 6, 0, elementBudget, env, false, true);
+            return buildBaseStructureDefinition(VMHV.class);
         }
 
         @Override
         protected int getControllerTextureIndex() {
-            return GTUtility.getCasingTextureIndex(GregTechAPI.sBlockCasings4, 1);
+            return GTUtility.getCasingTextureIndex(getItemList().getBlock(), 1);
         }
 
         @Override
@@ -191,74 +102,36 @@ public class MTEVoidMiners {
 
         public VMIV(String aName, int tier) {
             super(aName, tier);
-            casingTextureIndex = GTUtility.getCasingTextureIndex(GregTechAPI.sBlockCasings4, 0);
+        }
+
+        @Override
+        public ItemList getItemList() {
+            return ItemList.Casing_RobustTungstenSteel;
+        }
+
+        @Override
+        public Materials getMaterials() {
+            return Materials.TungstenSteel;
         }
 
         @Override
         protected int getMinTier() {
-            return 5;
+            return VoltageIndex.IV;
+        }
+
+        @Override
+        public IStructureDefinition<VMIV> getStructureDefinition() {
+            return buildBaseStructureDefinition(VMIV.class);
+        }
+
+        @Override
+        protected int getControllerTextureIndex() {
+            return GTUtility.getCasingTextureIndex(getItemList().getBlock(), 0);
         }
 
         @Override
         public IMetaTileEntity newMetaEntity(IGregTechTileEntity iGregTechTileEntity) {
             return new VMIV(this.mName, this.TIER_MULTIPLIER);
-        }
-
-        @Override
-        public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
-            return checkPiece("main", 1, 6, 0)
-                && checkHatches()
-                && GTUtility.getTier(getMaxInputVoltage()) >= getMinTier()
-                && mMaintenanceHatches.size() == 1;
-        }
-
-        @Override
-        public void construct(ItemStack stackSize, boolean hintsOnly) {
-            buildPiece("main", stackSize, hintsOnly, 1, 6, 0);
-        }
-
-        @Override
-        public IStructureDefinition<VMIV> getStructureDefinition() {
-            return StructureDefinition.<VMIV>builder()
-                .addShape(
-                    "main",
-                    transpose(
-                        new String[][]{
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {"   ", " G ", "   "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {" G ", "GFG", " G "},
-                            {"H~H", "HHH", "HHH"}}))
-                .addElement(
-                    'F',
-                    ofBlock(
-                        ItemList.Casing_IV.getBlock(),
-                        ItemList.Casing_IV.get(0)
-                            .getItemDamage()))
-                .addElement('G', ofFrame(Materials.TungstenSteel))
-                .addElement(
-                    'H',
-                    buildHatchAdder(VMIV.class).atLeast(InputHatch, OutputBus, InputBus, Maintenance, Energy)
-                        .dot(1)
-                        .casingIndex(8)
-                        .buildAndChain(
-                            ItemList.Casing_IV.getBlock(),
-                            ItemList.Casing_IV.get(0)
-                                .getItemDamage()))
-                .build();
-        }
-
-        @Override
-        public int survivalConstruct(ItemStack stackSize, int elementBudget, ISurvivalBuildEnvironment env) {
-            if (mMachine) return -1;
-            return survivalBuildPiece("main", stackSize, 1, 6, 0, elementBudget, env, false, true);
-        }
-
-        @Override
-        protected int getControllerTextureIndex() {
-            return GTUtility.getCasingTextureIndex(GregTechAPI.sBlockCasings4, 0);
         }
     }
 }
