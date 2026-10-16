@@ -14,19 +14,15 @@ public class CommonProxy {
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
     }
 
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
-        // Diagnostic build: skip controller registration to isolate launch failure.
+        // Register the machine during the GregTech-supported load phase.
         ItemRegistry.run();
     }
 
-    // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
-        // Diagnostic Preview 2: skip recipe registration to isolate the GTNH crafting-loader startup crash.
-        // ItemRegistry still registers all three miner controllers, so NEI and multiblock tests remain possible.
-        // RecipeLoader.run();
+        // Register only the affordable LV recipe after all GT items exist.
+        RecipeLoader.run();
     }
 
-    // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {}
 }
