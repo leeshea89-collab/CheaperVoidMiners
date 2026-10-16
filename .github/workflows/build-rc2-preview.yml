@@ -5,6 +5,10 @@ on:
     branches: [gtnh-2.9-rc2]
   workflow_dispatch:
 
+concurrency:
+  group: rc2-preview-build
+  cancel-in-progress: true
+
 jobs:
   assemble:
     runs-on: ubuntu-24.04
