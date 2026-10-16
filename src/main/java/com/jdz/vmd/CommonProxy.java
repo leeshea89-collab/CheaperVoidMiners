@@ -21,7 +21,9 @@ public class CommonProxy {
 
     // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
-        RecipeLoader.run();
+        // Diagnostic Preview 2: skip recipe registration to isolate the GTNH crafting-loader startup crash.
+        // ItemRegistry still registers all three miner controllers, so NEI and multiblock tests remain possible.
+        // RecipeLoader.run();
     }
 
     // register server commands in this event handler (Remove if not needed)
