@@ -21,7 +21,8 @@ public class CommonProxy {
 
     public void postInit(FMLPostInitializationEvent event) {
         // Register only the affordable LV recipe after all GT items exist.
-        RecipeLoader.run();
+        // Isolation test: do not register a crafting recipe in this build.
+        // RecipeLoader.run();
     }
 
     public void serverStarting(FMLServerStartingEvent event) {}
