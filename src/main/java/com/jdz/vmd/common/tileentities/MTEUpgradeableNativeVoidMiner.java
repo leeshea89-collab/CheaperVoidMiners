@@ -1,6 +1,8 @@
 package com.jdz.vmd.common.tileentities;
 
 import static com.gtnewhorizon.structurelib.structure.StructureUtility.transpose;
+
+import bwcrossmod.galacticgreg.MTEVoidMiners.VMLUV;
 import static gregtech.api.enums.HatchElement.*;
 import static gregtech.api.util.GTStructureUtility.buildHatchAdder;
 import static gregtech.api.util.GTStructureUtility.ofFrame;
@@ -23,7 +25,7 @@ import gregtech.api.util.GTUtility;
  *
  * VMTweak patches MTEVoidMinerBase, which is inherited here.
  */
-public class MTEUpgradeableNativeVoidMiner extends bwcrossmod.galacticgreg.MTEVoidMiners.VMLUV {
+public class MTEUpgradeableNativeVoidMiner extends VMLUV {
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
@@ -62,7 +64,7 @@ public class MTEUpgradeableNativeVoidMiner extends bwcrossmod.galacticgreg.MTEVo
     }
 
     @Override
-    public IStructureDefinition<bwcrossmod.galacticgreg.MTEVoidMiners.VMLUV> getStructureDefinition() {
+    public IStructureDefinition<VMLUV> getStructureDefinition() {
         return SteelStructure.STRUCTURE_DEFINITION;
     }
 
