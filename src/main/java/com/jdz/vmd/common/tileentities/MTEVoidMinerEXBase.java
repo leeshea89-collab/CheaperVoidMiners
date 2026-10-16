@@ -125,8 +125,12 @@ public abstract class MTEVoidMinerEXBase<T extends MTEVoidMinerEXBase<T>> extend
 
     @Override
     public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
-        return checkPiece("main", 1, 6, 0)
-            && checkHatches(new java.util.ArrayList<>())
+        if (!checkPiece("main", 1, 6, 0)) return false;
+        // GTNH 2.9 reports hatch validation problems into the supplied list.
+        @SuppressWarnings("rawtypes")
+        java.util.List structureErrors = new java.util.ArrayList();
+        checkHatches(structureErrors);
+        return structureErrors.isEmpty()
             && GTUtility.getTier(getMaxInputVoltage()) >= getMinTier()
             && mMaintenanceHatches.size() == 1;
     }
