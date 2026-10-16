@@ -45,6 +45,41 @@ public class MTEVoidMiners {
             return buildBaseStructureDefinition(VMLV.class);
         }
 
+        // Each 10-tick mining cycle generates eight ores per second at LV.
+        // Scaling is achieved by running the original void-miner output algorithm
+        // additional times; this preserves VMTweak's dimension/drop-map integration.
+        private int halfCycleRemainder = 0;
+
+        private int currentPowerTier() {
+            return Math.min(VoltageIndex.IV,
+                Math.max(VoltageIndex.LV, GTUtility.getTier(getMaxInputVoltage())));
+        }
+
+        @Override
+        protected void setElectricityStats() {
+            super.setElectricityStats();
+            // Charge the actual available energy tier instead of always charging LV.
+            mEUt = -Math.abs(Math.toIntExact(gregtech.api.enums.GTValues.VP[currentPowerTier()]));
+        }
+
+        @Override
+        protected void outputAfterRecipe() {
+            // Number of half-runs of the base 8-ore/s machine:
+            // LV=2, MV=3, HV=4, EV=6, IV=8.
+            // Alternating the extra half-run at MV gives an average of 12/s.
+            final int[] halfRuns = {2, 3, 4, 6, 8};
+            final int desired = halfRuns[currentPowerTier() - VoltageIndex.LV];
+            int repeats = desired / 2;
+            halfCycleRemainder += desired % 2;
+            if (halfCycleRemainder >= 2) {
+                repeats++;
+                halfCycleRemainder -= 2;
+            }
+            for (int i = 0; i < repeats; i++) {
+                super.outputAfterRecipe();
+            }
+        }
+
         @Override
         public IMetaTileEntity newMetaEntity(IGregTechTileEntity iGregTechTileEntity) {
             return new VMLV(this.mName, this.TIER_MULTIPLIER);
