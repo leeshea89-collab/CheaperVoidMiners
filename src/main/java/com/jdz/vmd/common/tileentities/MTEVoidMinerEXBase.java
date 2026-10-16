@@ -65,7 +65,6 @@ public abstract class MTEVoidMinerEXBase<T extends MTEVoidMinerEXBase<T>> extend
             .addElement(
                 'H',
                 buildHatchAdder(clazz).atLeast(InputHatch, OutputBus, InputBus, Maintenance, Energy)
-                    .dot(1)
                     .casingIndex(getControllerTextureIndex())
                     .buildAndChain(
                         getItemList().getBlock(),
@@ -127,7 +126,7 @@ public abstract class MTEVoidMinerEXBase<T extends MTEVoidMinerEXBase<T>> extend
     @Override
     public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
         return checkPiece("main", 1, 6, 0)
-            && checkHatches()
+            && checkHatches(new java.util.ArrayList<>())
             && GTUtility.getTier(getMaxInputVoltage()) >= getMinTier()
             && mMaintenanceHatches.size() == 1;
     }
