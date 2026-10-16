@@ -2,7 +2,7 @@ name: Build GTNH 2.9 RC2 preview JAR
 
 on:
   push:
-    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base, single-miner-affordable-lv]
+    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base, single-miner-affordable-lv, affordable-structure-only-test]
   workflow_dispatch:
 
 concurrency:
@@ -30,25 +30,25 @@ jobs:
           mkdir -p dist
           found=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -print -quit)
           test -n "$found"
-          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-Affordable-LV-IV-Preview.jar
+          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-StructureOnly-Isolation.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-Affordable-LV-IV-Preview
+          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-StructureOnly-Isolation
           path: dist/*.jar
           if-no-files-found: error
       - name: Generate SHA-256 checksum
-        if: github.ref == 'refs/heads/single-miner-affordable-lv'
+        if: github.ref == 'refs/heads/affordable-structure-only-test'
         run: |
           cd dist
           sha256sum *.jar > SHA256SUMS.txt
       - name: Publish direct-JAR GitHub pre-release
-        if: github.ref == 'refs/heads/single-miner-affordable-lv'
+        if: github.ref == 'refs/heads/affordable-structure-only-test'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="affordable-lv-iv-preview-${GITHUB_SHA:0:7}"
+          tag="affordable-structure-only-${GITHUB_SHA:0:7}"
           gh release create "$tag" dist/*.jar dist/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Affordable LV-IV Void Miner preview (${GITHUB_SHA:0:7})" \
-            --notes "Unverified GTNH 2.9.0-RC2 testing build. LV Miner + 4 steel plates; compact steel multiblock. Keep VMTweak installed. Not yet tested in-game. Install only if you trust the repository and have backed up your world."
+            --title "Structure-only Void Miner diagnostic (${GITHUB_SHA:0:7})" \
+            --notes "Diagnostic GTNH 2.9.0-RC2 build. Compact steel multiblock with crafting recipe DISABLED. Keep VMTweak installed. Not yet tested in-game. Install only if you trust the repository and have backed up your world."
