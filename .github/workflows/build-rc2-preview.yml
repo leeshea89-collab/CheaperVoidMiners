@@ -2,7 +2,7 @@ name: Build GTNH 2.9 RC2 preview JAR
 
 on:
   push:
-    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base, single-miner-affordable-lv, single-miner-native-shape-steel]
+    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base, single-miner-affordable-lv, single-miner-native-shape-steel, five-tier-void-miners]
   workflow_dispatch:
 
 concurrency:
@@ -30,25 +30,25 @@ jobs:
           mkdir -p dist
           found=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -print -quit)
           test -n "$found"
-          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-NativeShape-Steel-LV-IV-Preview.jar
+          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-Five-Tier-Progression-Preview.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-NativeShape-Steel-LV-IV-Preview
+          name: CheaperVoidMiners-GTNH-2.9.0-RC2-Five-Tier-Progression-Preview
           path: dist/*.jar
           if-no-files-found: error
       - name: Generate SHA-256 checksum
-        if: github.ref == 'refs/heads/single-miner-native-shape-steel'
+        if: github.ref == 'refs/heads/five-tier-void-miners'
         run: |
           cd dist
           sha256sum *.jar > SHA256SUMS.txt
       - name: Publish direct-JAR GitHub pre-release
-        if: github.ref == 'refs/heads/single-miner-native-shape-steel'
+        if: github.ref == 'refs/heads/five-tier-void-miners'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="native-shape-steel-lv-iv-${GITHUB_SHA:0:7}"
+          tag="five-tier-progression-${GITHUB_SHA:0:7}"
           gh release create "$tag" dist/*.jar dist/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Steel native-shape LV-IV Void Miner preview (${GITHUB_SHA:0:7})" \
-            --notes "Unverified GTNH 2.9.0-RC2 testing build derived from the known-loading native-base miner. Original 7x9x7 Void Miner geometry with steel substitutions and LV Miner + 4 Steel Plates crafting recipe. Keep VMTweak installed. Back up your worlds. Install only if you trust the repository and have backed up your world."
+            --title "Five tier LV-to-IV Void Miner progression preview (${GITHUB_SHA:0:7})" \
+            --notes "Unverified GTNH 2.9.0-RC2 testing build. Five separate LV/MV/HV/EV/IV native-shape Void Miners with tiered steel/aluminium/stainless/titanium/tungstensteel structures and progressively more complex crafting recipes. Legacy controller ID 31763 retained for world compatibility. VMTweak required. Back up your world before use."
