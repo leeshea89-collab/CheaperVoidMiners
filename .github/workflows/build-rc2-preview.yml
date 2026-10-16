@@ -2,7 +2,7 @@ name: Build GTNH 2.9 RC2 preview JAR
 
 on:
   push:
-    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base]
+    branches: [gtnh-2.9-rc2, single-upgradeable-miner, single-miner-id-isolation, single-miner-registration-probe, single-miner-native-void-probe, single-miner-lv-native-base, single-miner-affordable-lv]
   workflow_dispatch:
 
 concurrency:
@@ -30,9 +30,9 @@ jobs:
           mkdir -p dist
           found=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -print -quit)
           test -n "$found"
-          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-LV-IV-NativeBase-Preview.jar
+          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-Affordable-LV-IV-Preview.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-LV-IV-NativeBase-Preview
+          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-Affordable-LV-IV-Preview
           path: dist/*.jar
           if-no-files-found: error
