@@ -2,11 +2,11 @@ name: Build GTNH 2.9 RC2 preview JAR
 
 on:
   push:
-    branches: [gtnh-2.9-rc2]
+    branches: [gtnh-2.9-rc2, single-upgradeable-miner]
   workflow_dispatch:
 
 concurrency:
-  group: rc2-preview-build
+  group: rc2-preview-build-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -30,9 +30,9 @@ jobs:
           mkdir -p dist
           found=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -print -quit)
           test -n "$found"
-          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-Preview2-Diagnostic.jar
+          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-Prototype1.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CheaperVoidMiners-GTNH-2.9.0-RC2-Preview2-Diagnostic
+          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-Prototype1
           path: dist/*.jar
           if-no-files-found: error
