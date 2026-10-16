@@ -30,9 +30,9 @@ jobs:
           mkdir -p dist
           found=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -print -quit)
           test -n "$found"
-          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-Prototype1.jar
+          cp "$found" dist/CheaperVoidMiners-1.0.1-GTNH-2.9.0-RC2-SingleMiner-NoRegistration-Diagnostic.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-Prototype1
+          name: CheaperVoidMiners-GTNH-2.9.0-RC2-SingleMiner-NoRegistration-Diagnostic
           path: dist/*.jar
           if-no-files-found: error
