@@ -17,7 +17,7 @@ public class CommonProxy {
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
         // Diagnostic build: skip controller registration to isolate launch failure.
-        // ItemRegistry.run();
+        ItemRegistry.run();
     }
 
     // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
