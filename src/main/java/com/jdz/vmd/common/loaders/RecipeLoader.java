@@ -18,6 +18,14 @@ public final class RecipeLoader {
 
     private RecipeLoader() {}
 
+    /**
+     * GregTech circuit ore-dictionary name for a tier. GTNH names them circuitBasic, circuitGood, circuitAdvanced,
+     * circuitData and circuitElite; "circuitLV" etc. do not exist, which made every recipe uncraftable.
+     */
+    private static String circuit(Materials tier) {
+        return OrePrefixes.circuit.name() + tier.mName;
+    }
+
     private static ItemStack plate(Materials material) {
         return GTOreDictUnificator.get(OrePrefixes.plate, material, 1L);
     }
@@ -36,7 +44,11 @@ public final class RecipeLoader {
             }
         }
 
-        boolean added = GTModHandler.addShapelessCraftingRecipe(result.copy(), ingredients);
+        // Not buffered and no collision removal, so the recipe is added immediately and never stripped.
+        boolean added = GTModHandler.addShapelessCraftingRecipe(
+            result.copy(),
+            GTModHandler.RecipeBits.DO_NOT_CHECK_FOR_COLLISIONS | GTModHandler.RecipeBits.NOT_REMOVABLE,
+            ingredients);
         if (!added) {
             throw new IllegalStateException("GregTech refused " + tier + " Void Miner crafting recipe");
         }
@@ -51,7 +63,7 @@ public final class RecipeLoader {
             plate(Materials.Steel),
             ItemList.Electric_Motor_LV.get(1L),
             ItemList.Electric_Piston_LV.get(1L),
-            "circuitLV");
+            circuit(Materials.LV));
 
         // MV: consume the previous miner, then upgrade motors, circuits, and casing stock.
         register(Tier.MV,
@@ -61,7 +73,7 @@ public final class RecipeLoader {
             plate(Materials.Aluminium),
             ItemList.Electric_Motor_MV.get(1L),
             ItemList.Electric_Piston_MV.get(1L),
-            "circuitMV");
+            circuit(Materials.MV));
 
         // HV adds a dedicated fluid pump for mining-gas infrastructure.
         register(Tier.HV,
@@ -72,7 +84,7 @@ public final class RecipeLoader {
             ItemList.Electric_Motor_HV.get(1L),
             ItemList.Electric_Piston_HV.get(1L),
             ItemList.Electric_Pump_HV.get(1L),
-            "circuitHV");
+            circuit(Materials.HV));
 
         // EV and IV require a machine hull and a robotic arm as well.
         // Standard GregTech has only LV, MV and HV dedicated Miner machines.
@@ -85,7 +97,7 @@ public final class RecipeLoader {
             ItemList.Electric_Piston_EV.get(1L),
             ItemList.Electric_Pump_EV.get(1L),
             ItemList.Robot_Arm_EV.get(1L),
-            "circuitEV");
+            circuit(Materials.EV));
 
         register(Tier.IV,
             ItemRegistry.get(Tier.EV),
@@ -96,7 +108,7 @@ public final class RecipeLoader {
             ItemList.Electric_Piston_IV.get(1L),
             ItemList.Electric_Pump_IV.get(1L),
             ItemList.Robot_Arm_IV.get(1L),
-            "circuitIV");
+            circuit(Materials.IV));
 
         // Deliberately no recipe for the legacy controller; existing blocks
         // retain their old ID while new survival progression uses five tiers.

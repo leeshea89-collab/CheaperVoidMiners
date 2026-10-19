@@ -9,7 +9,31 @@ import static gregtech.api.enums.HatchElement.OutputBus;
 import static gregtech.api.util.GTStructureUtility.buildHatchAdder;
 import static gregtech.api.util.GTStructureUtility.ofFrame;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraftforge.common.util.ForgeDirection;
+
+import com.jdz.vmd.Config;
+import com.jdz.vmd.common.planets.PlanetSelection;
+import com.jdz.vmd.common.planets.PlanetSurface;
+
+import bwcrossmod.galacticgreg.MTEVoidMinerBase;
 import bwcrossmod.galacticgreg.MTEVoidMiners.VMLUV;
+import bwcrossmod.galacticgreg.VoidMinerUtility;
+import galacticgreg.api.enums.DimensionDef;
+import gregtech.api.recipe.check.CheckRecipeResult;
+import gregtech.api.recipe.check.SimpleCheckRecipeResult;
+import gregtech.api.util.shutdown.ShutDownReasonRegistry;
+import gtneioreplugin.util.DimensionHelper;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import gregtech.api.casing.Casings;
@@ -189,9 +213,16 @@ public class MTETieredVoidMiner extends VMLUV {
             .addMachineType(t.name() + " Void Miner")
             .addInfo("A dedicated " + t.name() + "-tier Void Miner; upgrade by crafting the next controller.")
             .addInfo("Produces " + t.oresPerSecond() + " ores/s at normal operation.")
+            .addInfo("Put a planet block (GT NEI Ore Plugin dimension display) in the controller slot to mine")
+            .addInfo("that planet instead of the dimension the machine stands in.")
+            .addInfo(
+                Config.planetTierGating
+                    ? "Accepts planets up to T" + Config.maxPlanetTier[t.ordinal()] + "."
+                    : "Accepts planets of any tier.")
+            .addInfo("Sneak + screwdriver: switch between Ore mode and Surface mode.")
+            .addInfo("Surface mode mines the planet's stone, cobblestone and topsoil instead of ores.")
+            .addInfo("Screwdriver: toggle the ore filter between whitelist and blacklist.")
             .addInfo("Requires " + t.name() + " or better energy; faster hatches do not upgrade output.")
-            .addInfo("Original GTNH Void Miner shape with tier-specific components.")
-            .addInfo("Planet/ore selection, input filters and noble gases use native GTNH/VMTweak behavior.")
             .beginStructureBlock(7, 9, 7, false)
             .addController("Front centre, second layer")
             .addCasing("42", t.frameLabel + " Frame Boxes", false)
@@ -206,6 +237,122 @@ public class MTETieredVoidMiner extends VMLUV {
             .toolTipFinisher();
     }
 
+    // ---------------------------------------------------------------------------------------------------------
+    // Planet selection and modes
+    // ---------------------------------------------------------------------------------------------------------
+
+    private static final String NOT_APPLIED = "\u0000";
+    private boolean surfaceMode;
+    private String appliedPlanet = NOT_APPLIED;
+    private List<ItemStack> surfaceBlocks = Collections.emptyList();
+
+    private static Field fTotalWeight, fCanVoidMine;
+    private static Method mCalculateDropMap;
+
+    private static void initReflection() throws ReflectiveOperationException {
+        if (fTotalWeight != null) return;
+        Field tw = MTEVoidMinerBase.class.getDeclaredField("totalWeight");
+        Field cv = MTEVoidMinerBase.class.getDeclaredField("canVoidMine");
+        Method cd = MTEVoidMinerBase.class.getDeclaredMethod("calculateDropMap");
+        tw.setAccessible(true);
+        cv.setAccessible(true);
+        cd.setAccessible(true);
+        mCalculateDropMap = cd;
+        fCanVoidMine = cv;
+        fTotalWeight = tw;
+    }
+
+    /** The planet in the controller slot (ore-plugin abbreviation), or null to use the machine's own dimension. */
+    private String selectedPlanet() {
+        return PlanetSelection.abbrOf(getControllerSlot());
+    }
+
+    private String effectiveAbbr(String planet) {
+        if (planet != null) return planet;
+        try {
+            String dimName = DimensionDef.getDimensionName(getBaseMetaTileEntity().getWorld());
+            return dimName == null ? null : DimensionHelper.INTERNAL_TO_ABBR.get(dimName);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Points the inherited ore tables at the selected planet, or back at the machine's own dimension. */
+    private void applyPlanet(String planet) {
+        try {
+            initReflection();
+            if (planet == null) {
+                mCalculateDropMap.invoke(this);
+            } else {
+                String internal = DimensionHelper.ABBR_TO_INTERNAL.get(planet);
+                dropMap = VoidMinerUtility.dropMapsByDimName.getOrDefault(internal, new VoidMinerUtility.DropMap());
+                extraDropMap = VoidMinerUtility.extraDropsByDimName
+                    .getOrDefault(internal, new VoidMinerUtility.DropMap());
+                dropMap.isDistributionCached(extraDropMap);
+                fCanVoidMine.setBoolean(this, true);
+                fTotalWeight.setFloat(this, dropMap.getTotalWeight() + extraDropMap.getTotalWeight());
+            }
+            if (dropMap != null && selected.getSlots() != dropMap.getOres().length) {
+                selected.setSize(dropMap.getOres().length);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("[CheaperVoidMiners] Void Miner internals changed", e);
+        }
+        surfaceBlocks = PlanetSurface.forAbbr(effectiveAbbr(planet));
+        appliedPlanet = planet == null ? "" : planet;
+    }
+
+    @Override
+    public CheckRecipeResult checkProcessing() {
+        String planet = selectedPlanet();
+        if (planet != null && Config.planetTierGating) {
+            int planetTier = PlanetSelection.tierOf(PlanetSelection.byAbbr(planet));
+            if (planetTier > Config.maxPlanetTier[tier().ordinal()]) {
+                stopMachine(ShutDownReasonRegistry.NONE);
+                return SimpleCheckRecipeResult.ofFailurePersistOnShutdown("cvm_planet_tier_too_high");
+            }
+        }
+        String key = planet == null ? "" : planet;
+        if (!key.equals(appliedPlanet)) applyPlanet(planet);
+
+        if (surfaceMode) {
+            setElectricityStats();
+            if (surfaceBlocks.isEmpty()) {
+                stopMachine(ShutDownReasonRegistry.NONE);
+                return SimpleCheckRecipeResult.ofFailurePersistOnShutdown("cvm_no_surface_blocks");
+            }
+            return SimpleCheckRecipeResult.ofSuccess("cvm_surface_mining");
+        }
+        return super.checkProcessing();
+    }
+
+    @Override
+    public void onScrewdriverRightClick(ForgeDirection side, EntityPlayer aPlayer, float aX, float aY, float aZ,
+        ItemStack aTool) {
+        if (aPlayer.isSneaking()) {
+            surfaceMode = !surfaceMode;
+            aPlayer.addChatComponentMessage(
+                new ChatComponentText(
+                    EnumChatFormatting.GOLD + "Void Miner mode: "
+                        + EnumChatFormatting.WHITE
+                        + (surfaceMode ? "Surface (planet stone and topsoil)" : "Ore")));
+            return;
+        }
+        super.onScrewdriverRightClick(side, aPlayer, aX, aY, aZ, aTool);
+    }
+
+    @Override
+    public void saveNBTData(NBTTagCompound aNBT) {
+        super.saveNBTData(aNBT);
+        aNBT.setBoolean("cvmSurfaceMode", surfaceMode);
+    }
+
+    @Override
+    public void loadNBTData(NBTTagCompound aNBT) {
+        super.loadNBTData(aNBT);
+        surfaceMode = aNBT.getBoolean("cvmSurfaceMode");
+    }
+
     @Override
     protected void setElectricityStats() {
         super.setElectricityStats();
@@ -214,7 +361,21 @@ public class MTETieredVoidMiner extends VMLUV {
 
     @Override
     protected void outputAfterRecipe() {
-        // GTNH/VMTweak native generation is used for each output sample.
+        if (surfaceMode) {
+            if (!surfaceBlocks.isEmpty()) {
+                int batches = Math.max(1, mMaxProgresstime / 10);
+                int runs = tier().outputRuns * batches;
+                for (int i = 0; i < runs; i++) {
+                    ItemStack pick = surfaceBlocks.get(ThreadLocalRandom.current().nextInt(surfaceBlocks.size()))
+                        .copy();
+                    pick.stackSize = Config.surfaceBlocksPerRun;
+                    addOutputPartial(pick);
+                }
+                updateSlots();
+            }
+            return;
+        }
+        // Native GTNH generation is used for each output sample (planet-specific when a planet is selected).
         for (int i = 0; i < tier().outputRuns; i++) {
             super.outputAfterRecipe();
         }
