@@ -110,7 +110,71 @@ public final class RecipeLoader {
             ItemList.Robot_Arm_IV.get(1L),
             circuit(Materials.IV));
 
+        registerFluidDrills();
+
         // Deliberately no recipe for the legacy controller; existing blocks
         // retain their old ID while new survival progression uses five tiers.
+    }
+
+    private static void drill(Tier tier, Object... ingredients) {
+        ItemStack result = ItemRegistry.fluidDrill(tier);
+        if (result == null) return; // id was taken or drills are off
+        for (Object ingredient : ingredients) {
+            if (ingredient == null) {
+                System.out.println("[CheaperVoidMiners] Missing ingredient; no recipe for the " + tier + " Void Fluid Drill.");
+                return;
+            }
+        }
+        boolean added = GTModHandler.addShapelessCraftingRecipe(
+            result.copy(),
+            GTModHandler.RecipeBits.DO_NOT_CHECK_FOR_COLLISIONS | GTModHandler.RecipeBits.NOT_REMOVABLE,
+            ingredients);
+        System.out.println("[CheaperVoidMiners] " + (added ? "Registered" : "GregTech refused") + " the " + tier
+            + " Void Fluid Drill recipe.");
+    }
+
+    /** Pump machine + plates + pump + motor + circuit; each tier consumes the previous drill. */
+    private static void registerFluidDrills() {
+        drill(Tier.LV,
+            ItemList.Pump_LV.get(1L),
+            plate(Materials.Steel),
+            plate(Materials.Steel),
+            ItemList.Electric_Pump_LV.get(1L),
+            ItemList.Electric_Motor_LV.get(1L),
+            circuit(Materials.LV));
+        drill(Tier.MV,
+            ItemRegistry.fluidDrill(Tier.LV),
+            ItemList.Pump_MV.get(1L),
+            plate(Materials.Aluminium),
+            plate(Materials.Aluminium),
+            ItemList.Electric_Pump_MV.get(1L),
+            ItemList.Electric_Motor_MV.get(1L),
+            circuit(Materials.MV));
+        drill(Tier.HV,
+            ItemRegistry.fluidDrill(Tier.MV),
+            ItemList.Pump_HV.get(1L),
+            plate(Materials.StainlessSteel),
+            plate(Materials.StainlessSteel),
+            ItemList.Electric_Pump_HV.get(1L),
+            ItemList.Electric_Motor_HV.get(1L),
+            circuit(Materials.HV));
+        drill(Tier.EV,
+            ItemRegistry.fluidDrill(Tier.HV),
+            ItemList.Hull_EV.get(1L),
+            plate(Materials.Titanium),
+            plate(Materials.Titanium),
+            ItemList.Electric_Pump_EV.get(1L),
+            ItemList.Electric_Pump_EV.get(1L),
+            ItemList.Electric_Motor_EV.get(1L),
+            circuit(Materials.EV));
+        drill(Tier.IV,
+            ItemRegistry.fluidDrill(Tier.EV),
+            ItemList.Hull_IV.get(1L),
+            plate(Materials.TungstenSteel),
+            plate(Materials.TungstenSteel),
+            ItemList.Electric_Pump_IV.get(1L),
+            ItemList.Electric_Pump_IV.get(1L),
+            ItemList.Electric_Motor_IV.get(1L),
+            circuit(Materials.IV));
     }
 }

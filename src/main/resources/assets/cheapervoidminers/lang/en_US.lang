@@ -1,3 +1,8 @@
 GT5U.gui.text.cvm_planet_tier_too_high=Planet tier too high for this Void Miner
 GT5U.gui.text.cvm_no_surface_blocks=No surface blocks known for this planet
 GT5U.gui.text.cvm_surface_mining=Mining planet surface
+GT5U.gui.text.cvm_fluid_drilling=Drilling planet fluid
+GT5U.gui.text.cvm_no_planet_fluids=No underground fluids known for this planet
+GT5U.gui.text.cvm_no_fluid_for_lens=No fluid on this planet matches the lens
+key.cvm.hud=Toggle Void Fluid Drill display
+key.categories.cvm=Cheaper Void Miners

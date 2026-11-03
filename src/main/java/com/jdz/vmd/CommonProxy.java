@@ -25,5 +25,31 @@ public class CommonProxy {
     }
 
     // register server commands in this event handler (Remove if not needed)
-    public void serverStarting(FMLServerStartingEvent event) {}
+    public void serverStarting(FMLServerStartingEvent event) {
+        // Every dimension is registered by now, so rebuild the planet -> fluid table and log it.
+        com.jdz.vmd.common.fluids.PlanetFluids.reset();
+        try {
+            int planets = 0;
+            for (String abbr : com.jdz.vmd.common.fluids.PlanetFluids.planetsWithFluids()) {
+                planets++;
+                StringBuilder sb = new StringBuilder("[CheaperVoidMiners] Void Fluid Drill ").append(abbr)
+                    .append(':');
+                for (com.jdz.vmd.common.fluids.PlanetFluids.Entry e : com.jdz.vmd.common.fluids.PlanetFluids
+                    .forAbbr(abbr)) {
+                    sb.append(' ')
+                        .append(e.registry)
+                        .append('=')
+                        .append(e.lens() == null ? "none" : e.lens().mName)
+                        .append(" (")
+                        .append(Math.round(e.share * 100))
+                        .append("%)");
+                }
+                System.out.println(sb);
+            }
+            System.out.println("[CheaperVoidMiners] Void Fluid Drill planets with fluids: " + planets);
+        } catch (RuntimeException e) {
+            System.out.println("[CheaperVoidMiners] Void Fluid Drill fluid table failed: " + e);
+            e.printStackTrace();
+        }
+    }
 }
