@@ -141,7 +141,7 @@ public final class FluidDrillHud {
                         MTEVoidFluidDrill.litresPerSecond(
                             e,
                             drill.tier(),
-                            drill.clientVoltage >= 0 ? drill.clientVoltage : drill.tier().voltage,
+                            drill.clientVoltage >= 0 ? drill.clientVoltage : drill.voltageTier(),
                             true))
                     .append(" L/s");
             }
