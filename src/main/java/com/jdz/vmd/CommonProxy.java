@@ -47,6 +47,10 @@ public class CommonProxy {
                 System.out.println(sb);
             }
             System.out.println("[CheaperVoidMiners] Void Fluid Drill planets with fluids: " + planets);
+            System.out.println("[CheaperVoidMiners] Void Fluid Drill planet lock: "
+                + com.jdz.vmd.common.tileentities.MTEVoidFluidDrill.gatingText() + "; LV drill on an LuV hatch pumps x"
+                + Math.pow(Config.energyRateMultiplier, 5) + "; T0 needs voltage "
+                + com.jdz.vmd.common.tileentities.MTEVoidFluidDrill.voltageFor(0));
         } catch (RuntimeException e) {
             System.out.println("[CheaperVoidMiners] Void Fluid Drill fluid table failed: " + e);
             e.printStackTrace();

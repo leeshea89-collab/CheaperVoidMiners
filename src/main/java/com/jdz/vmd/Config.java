@@ -18,6 +18,11 @@ public class Config {
     public static double[] fluidRateFactor = { 0.25, 0.5, 1.0, 2.0, 4.0 };
     /** Rate fraction when no lens is fitted (random fluid). */
     public static double noLensFactor = 0.5;
+    /** Fluid drill planet lock by voltage: first voltage tier (2 = MV) and the highest planet tier per tier from it. */
+    public static int fluidPlanetFirstVoltage = 2;
+    public static int[] fluidPlanetMaxTier = { 2, 4, 6, 8, 10 };
+    /** Rate multiplier per voltage tier the energy hatches are above the drill. */
+    public static double energyRateMultiplier = 2.0;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
@@ -64,6 +69,29 @@ public class Config {
                 "noLensFactor",
                 noLensFactor,
                 "With no lens the drill pumps a random fluid of the planet at this fraction of the normal rate.")
+            .getDouble();
+
+        fluidPlanetFirstVoltage = configuration.getInt(
+            "planetLockFirstVoltage",
+            "fluid_drill",
+            fluidPlanetFirstVoltage,
+            0,
+            9,
+            "Planets are locked behind the voltage the drill runs at (its energy hatch tier). This is the first voltage tier that can drill anything: 1 LV, 2 MV, 3 HV...");
+        int[] lock = configuration
+            .get(
+                "fluid_drill",
+                "planetLockMaxTier",
+                fluidPlanetMaxTier,
+                "Highest planet tier (0-10) reachable at each voltage tier, starting at planetLockFirstVoltage. Default: MV T0-2, HV T3-4, EV T5-6, IV T7-8, LuV T9-10.")
+            .getIntList();
+        if (lock.length > 0) fluidPlanetMaxTier = lock;
+        energyRateMultiplier = configuration
+            .get(
+                "fluid_drill",
+                "energyRateMultiplier",
+                energyRateMultiplier,
+                "Each voltage tier the drill's energy hatches are above the drill's own tier multiplies the rate by this (and the drill uses that tier's power).")
             .getDouble();
 
         if (configuration.hasChanged()) {

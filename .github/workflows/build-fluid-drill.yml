@@ -75,6 +75,7 @@ jobs:
           cat cvm.log
           grep -q "Registered LV Void Fluid Drill" cvm.log
           grep -q "Void Fluid Drill planets with fluids" cvm.log
+          grep -q "planet lock: MV T0-T2, HV T3-T4, EV T5-T6, IV T7-T8, LuV T9-T10" cvm.log
 
       - name: Publish server log
         if: always()

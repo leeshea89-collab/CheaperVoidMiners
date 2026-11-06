@@ -62,7 +62,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
 
     private static final String MAIN = "main";
     /** Client sync events (GT's own ids are below 20). */
-    public static final byte EVENT_PLANET = 100, EVENT_LENS = 101, EVENT_STATUS = 102;
+    public static final byte EVENT_PLANET = 100, EVENT_LENS = 101, EVENT_STATUS = 102, EVENT_VOLTAGE = 103;
     public static final int STATUS_OK = 0, STATUS_TIER_TOO_HIGH = 1, STATUS_NO_FLUID_FOR_LENS = 2,
         STATUS_NO_FLUIDS = 3;
 
@@ -115,7 +115,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
 
     // Server-side state of the last cycle, and the client copies sent by block events.
     private int status = STATUS_OK;
-    public int clientPlanet = -1, clientLens = -1, clientStatus = STATUS_OK;
+    public int clientPlanet = -1, clientLens = -1, clientStatus = STATUS_OK, clientVoltage = -1;
 
     public MTEVoidFluidDrill(int id, String name, String localName, Tier tier) {
         super(id, name, localName);
@@ -167,15 +167,50 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
     // Running
     // ---------------------------------------------------------------------------------------------------------
 
-    /** Highest planet tier this drill may target with a planet block. */
-    public int maxPlanetTier() {
-        return Config.maxPlanetTier[tier().ordinal()];
+    /** Voltage tier the drill runs at: its energy hatches' tier (never below the drill's own). */
+    public int voltageTier() {
+        int v = GTUtility.getTier(getMaxInputVoltage());
+        return Math.max(tier().voltage, Math.min(GTValues.VP.length - 1, v));
     }
 
-    /** Litres per second for a fluid at this tier, with or without a lens. */
-    public static int litresPerSecond(PlanetFluids.Entry e, Tier tier, boolean lens) {
-        double rate = e.maxAmount * Config.fluidRateFactor[tier.ordinal()] * (lens ? 1.0 : Config.noLensFactor);
+    /** Highest planet tier reachable at this voltage tier (MV..LuV by default), or -1 for none. */
+    public static int maxPlanetTierAt(int voltageTier) {
+        int i = voltageTier - Config.fluidPlanetFirstVoltage;
+        if (i < 0) return -1;
+        int[] m = Config.fluidPlanetMaxTier;
+        return m[Math.min(i, m.length - 1)];
+    }
+
+    /** Highest planet tier this drill may target (planet block or the dimension it stands in). */
+    public int maxPlanetTier() {
+        return maxPlanetTierAt(isClientSide() && clientVoltage >= 0 ? clientVoltage : voltageTier());
+    }
+
+    private boolean isClientSide() {
+        IGregTechTileEntity base = getBaseMetaTileEntity();
+        return base != null && base.isClientSide();
+    }
+
+    /** Lowest voltage tier that reaches this planet tier, or -1 if none does. */
+    public static int voltageFor(int planetTier) {
+        int[] m = Config.fluidPlanetMaxTier;
+        for (int i = 0; i < m.length; i++) if (m[i] >= planetTier) return Config.fluidPlanetFirstVoltage + i;
+        return -1;
+    }
+
+    /**
+     * Litres per second for a fluid: the drill tier's base rate, x energyRateMultiplier (2) for every voltage tier
+     * its energy hatches are above the drill.
+     */
+    public static int litresPerSecond(PlanetFluids.Entry e, Tier tier, int voltageTier, boolean lens) {
+        int extra = Math.max(0, voltageTier - tier.voltage);
+        double rate = e.maxAmount * Config.fluidRateFactor[tier.ordinal()] * Math.pow(Config.energyRateMultiplier, extra)
+            * (lens ? 1.0 : Config.noLensFactor);
         return (int) Math.max(1, Math.min(Integer.MAX_VALUE / 40, Math.round(rate)));
+    }
+
+    public static int litresPerSecond(PlanetFluids.Entry e, Tier tier, boolean lens) {
+        return litresPerSecond(e, tier, tier.voltage, lens);
     }
 
     private Dyes findLens(boolean planetInController) {
@@ -197,8 +232,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
         Dyes lens = findLens(planet != null);
         sync(planet, lens);
 
-        if (planet != null && Config.planetTierGating
-            && PlanetSelection.tierOf(PlanetSelection.byAbbr(planet)) > maxPlanetTier()) {
+        if (Config.planetTierGating && targetTier(planet) > maxPlanetTier()) {
             return fail(STATUS_TIER_TOO_HIGH, "cvm_planet_tier_too_high");
         }
         List<PlanetFluids.Entry> fluids = planet != null ? PlanetFluids.forAbbr(planet)
@@ -213,12 +247,20 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
 
         status = STATUS_OK;
         mOutputItems = null;
-        mOutputFluids = new FluidStack[] { new FluidStack(fluid, litresPerSecond(pick, tier(), lens != null)) };
-        mEUt = -Math.abs(Math.toIntExact(GTValues.VP[tier().voltage]));
+        int volt = voltageTier();
+        mOutputFluids = new FluidStack[] { new FluidStack(fluid, litresPerSecond(pick, tier(), volt, lens != null)) };
+        mEUt = -Math.abs(Math.toIntExact(GTValues.VP[volt]));
         mMaxProgresstime = 20;
         mEfficiency = getCurrentEfficiency(null);
         mEfficiencyIncrease = 10000;
         return SimpleCheckRecipeResult.ofSuccess("cvm_fluid_drilling");
+    }
+
+    /** Tier of the planet being drilled: the planet block's, else the dimension the drill stands in (0 if unknown). */
+    private int targetTier(String planet) {
+        String abbr = planet != null ? planet : PlanetFluids.abbrOfWorld(getBaseMetaTileEntity().getWorld());
+        if (abbr == null) return 0;
+        return Math.max(0, PlanetSelection.tierOf(PlanetSelection.byAbbr(abbr)));
     }
 
     private CheckRecipeResult fail(int newStatus, String key) {
@@ -248,6 +290,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
         if (base == null || !base.isServerSide()) return;
         base.sendBlockEvent(EVENT_PLANET, (byte) (lastPlanet == Integer.MIN_VALUE ? 0 : lastPlanet + 1));
         base.sendBlockEvent(EVENT_LENS, (byte) (lastLens == Integer.MIN_VALUE ? 0 : lastLens + 1));
+        base.sendBlockEvent(EVENT_VOLTAGE, (byte) (mMachine ? voltageTier() + 1 : 0));
         sendStatus();
     }
 
@@ -266,8 +309,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
         int p = planet == null ? -1 : DimensionHelper.getIndexByAbbr(planet);
         lastPlanet = p;
         lastLens = lens == null ? -1 : lens.mIndex;
-        if (planet != null && Config.planetTierGating
-            && PlanetSelection.tierOf(PlanetSelection.byAbbr(planet)) > maxPlanetTier()) {
+        if (Config.planetTierGating && targetTier(planet) > maxPlanetTier()) {
             status = STATUS_TIER_TOO_HIGH;
         } else if (status == STATUS_TIER_TOO_HIGH) {
             status = STATUS_OK;
@@ -282,6 +324,7 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
             case EVENT_PLANET -> clientPlanet = (value & 0xFF) - 1;
             case EVENT_LENS -> clientLens = (value & 0xFF) - 1;
             case EVENT_STATUS -> clientStatus = value;
+            case EVENT_VOLTAGE -> clientVoltage = (value & 0xFF) - 1;
             default -> {}
         }
     }
@@ -327,6 +370,25 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
         return full + " (T" + PlanetSelection.tierOf(d) + ")";
     }
 
+    /** e.g. "MV T0-T2, HV T3-T4, EV T5-T6, IV T7-T8, LuV T9-T10". */
+    public static String gatingText() {
+        StringBuilder sb = new StringBuilder();
+        int from = 0;
+        int[] m = Config.fluidPlanetMaxTier;
+        for (int i = 0; i < m.length; i++) {
+            int v = Config.fluidPlanetFirstVoltage + i;
+            if (m[i] < from || v >= GTValues.VN.length) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(GTValues.VN[v]).append(" T").append(from).append(m[i] > from ? "-T" + m[i] : "");
+            from = m[i] + 1;
+        }
+        return sb.toString();
+    }
+
+    private static String fmt(double d) {
+        return d == Math.rint(d) ? String.valueOf((long) d) : String.valueOf(d);
+    }
+
     @Override
     protected MultiblockTooltipBuilder createTooltip() {
         Tier t = tier();
@@ -335,8 +397,10 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
             .addInfo("Put a planet block (GT NEI Ore Plugin dimension display) in the controller slot to")
             .addInfo("drill that planet; without one it drills the dimension it stands in.")
             .addInfo(
-                Config.planetTierGating ? "Accepts planets up to T" + Config.maxPlanetTier[t.ordinal()] + "."
+                Config.planetTierGating ? "Planets are locked behind voltage: " + gatingText() + "."
                     : "Accepts planets of any tier.")
+            .addInfo("Higher-tier energy hatches pump faster: x" + fmt(Config.energyRateMultiplier)
+                + " per voltage tier above " + t.name() + ", using that tier's power.")
             .addInfo("Put a coloured lens in an input bus to choose the fluid. Each fluid on a planet")
             .addInfo("has its own lens colour; any lens of that colour works and is never used up.")
             .addInfo(
@@ -344,9 +408,8 @@ public class MTEVoidFluidDrill extends MTEEnhancedMultiBlockBase<MTEVoidFluidDri
                     + "% of the rate.")
             .addInfo("Look at the controller or hold a planet block to see the fluids and their lenses.")
             .addInfo(
-                "Rate: the fluid's GT max amount x " + Config.fluidRateFactor[t.ordinal()]
-                    + " L/s. Uses "
-                    + GTValues.VP[t.voltage]
+                "Rate at " + t.name() + ": the fluid's GT max amount x " + Config.fluidRateFactor[t.ordinal()]
+                    + " L/s, " + GTValues.VP[t.voltage]
                     + " EU/t.")
             .beginStructureBlock(7, 9, 7, false)
             .addController("Front centre, second layer")

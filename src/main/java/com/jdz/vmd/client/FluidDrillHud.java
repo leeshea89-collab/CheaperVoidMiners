@@ -108,7 +108,9 @@ public final class FluidDrillHud {
                 out.add(
                     new Line(
                         null,
-                        EnumChatFormatting.RED + "Planet tier too high: this drill reaches T" + drill.maxPlanetTier()));
+                        EnumChatFormatting.RED + (drill.maxPlanetTier() < 0 ? "Needs at least "
+                            + gregtech.api.enums.GTValues.VN[Config.fluidPlanetFirstVoltage] + " power"
+                            : "Planet tier too high: this voltage reaches T" + drill.maxPlanetTier())));
             }
         } else {
             ItemStack held = mc.thePlayer.getHeldItem();
@@ -135,7 +137,12 @@ public final class FluidDrillHud {
                 .append("%");
             if (drill != null) {
                 sb.append(", ")
-                    .append(MTEVoidFluidDrill.litresPerSecond(e, drill.tier(), true))
+                    .append(
+                        MTEVoidFluidDrill.litresPerSecond(
+                            e,
+                            drill.tier(),
+                            drill.clientVoltage >= 0 ? drill.clientVoltage : drill.tier().voltage,
+                            true))
                     .append(" L/s");
             }
             sb.append(EnumChatFormatting.DARK_GRAY)
@@ -166,11 +173,9 @@ public final class FluidDrillHud {
 
     private static String minDrillFor(int planetTier) {
         if (!Config.planetTierGating) return "any tier";
-        String[] names = { "LV", "MV", "HV", "EV", "IV" };
-        for (int i = 0; i < names.length; i++) {
-            if (Config.maxPlanetTier[i] >= planetTier) return names[i] + " or better";
-        }
-        return "no drill reaches T" + planetTier;
+        int v = MTEVoidFluidDrill.voltageFor(planetTier);
+        if (v < 0) return "no voltage reaches T" + planetTier;
+        return gregtech.api.enums.GTValues.VN[v] + " power or better";
     }
 
     private static MTEVoidFluidDrill lookedAtDrill(Minecraft mc) {
